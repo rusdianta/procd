@@ -560,6 +560,24 @@ instance_delete(struct service_instance *in)
 	service_stopped(s);
 }
 
+static int
+instance_exit_code(int ret)
+{
+	if (WIFEXITED(ret)) {
+		return WEXITSTATUS(ret);
+	}
+
+	if (WIFSIGNALED(ret)) {
+		return SIGNALLED_OFFSET + WTERMSIG(ret);
+	}
+
+	if (WIFSTOPPED(ret)) {
+		return WSTOPSIG(ret);
+	}
+
+	return 1;
+}
+
 static void
 instance_exit(struct uloop_process *p, int ret)
 {
@@ -574,6 +592,7 @@ instance_exit(struct uloop_process *p, int ret)
 
 	DEBUG(2, "Instance %s::%s exit with error code %d after %ld seconds\n", in->srv->name, in->name, ret, runtime);
 
+	in->exit_code = instance_exit_code(ret);
 	uloop_timeout_cancel(&in->timeout);
 	service_event("instance.stop", in->srv->name, in->name);
 
@@ -1112,6 +1131,7 @@ instance_init(struct service_instance *in, struct service *s, struct blob_attr *
 	in->proc.cb = instance_exit;
 	in->term_timeout = 5;
 	in->syslog_facility = LOG_DAEMON;
+	in->exit_code = 0;
 
 	in->_stdout.fd.fd = -2;
 	in->_stdout.stream.string_data = true;
@@ -1145,6 +1165,8 @@ void instance_dump(struct blob_buf *b, struct service_instance *in, int verbose)
 	if (in->command)
 		blobmsg_add_blob(b, in->command);
 	blobmsg_add_u32(b, "term_timeout", in->term_timeout);
+	if (!in->proc.pending)
+		blobmsg_add_u32(b, "exit_code", in->exit_code);
 
 	if (!avl_is_empty(&in->errors.avl)) {
 		struct blobmsg_list_node *var;
