@@ -479,6 +479,8 @@ int main(int argc, char **argv)
 			add_mount("/etc/group", 0, -1);
 		}
 
+		add_mount("/etc/resolv.conf", 0, -1);
+
 		int flags = CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWIPC | SIGCHLD;
 		if (opts.hostname)
 			flags |= CLONE_NEWUTS;
