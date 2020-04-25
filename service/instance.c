@@ -253,6 +253,9 @@ jail_run(struct service_instance *in, char **argv)
 	if (jail->ronly)
 		argv[argc++] = "-o";
 
+	if (in->require_jail)
+		argv[argc++] = "-E";
+
 	blobmsg_list_for_each(&jail->mount, var) {
 		const char *type = blobmsg_data(var->data);
 

@@ -39,7 +39,7 @@
 #include <libubox/uloop.h>
 
 #define STACK_SIZE	(1024 * 1024)
-#define OPT_ARGS	"S:C:n:h:r:w:d:psulocU:G:"
+#define OPT_ARGS	"S:C:n:h:r:w:d:psulocU:G:E"
 
 static struct {
 	char *name;
@@ -54,6 +54,7 @@ static struct {
 	int procfs;
 	int ronly;
 	int sysfs;
+	int require_jail;
 } opts;
 
 extern int pivot_root(const char *new_root, const char *put_old);
@@ -247,6 +248,7 @@ static void usage(void)
 	fprintf(stderr, "  -U <name>\tuser to run jailed process\n");
 	fprintf(stderr, "  -G <name>\tgroup to run jailed process\n");
 	fprintf(stderr, "  -o\t\tremont jail root (/) read only\n");
+	fprintf(stderr, "  -E\t\tfail if jail cannot be setup\n");
 	fprintf(stderr, "\nWarning: by default root inside the jail is the same\n\
 and he has the same powers as root outside the jail,\n\
 thus he can escape the jail and/or break stuff.\n\
@@ -434,6 +436,9 @@ int main(int argc, char **argv)
 		case 'G':
 			opts.group = optarg;
 			break;
+		case 'E':
+			opts.require_jail = 1;
+			break;
 		}
 	}
 
@@ -461,7 +466,8 @@ int main(int argc, char **argv)
 
 	if (opts.namespace && opts.seccomp && add_path_and_deps("libpreload-seccomp.so", 1, -1, 1)) {
 		ERROR("failed to load libpreload-seccomp.so\n");
-		return -1;
+		if (opts.require_jail)
+			return -1;
 	}
 
 	if (opts.name)
