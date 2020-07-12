@@ -57,6 +57,19 @@ static struct {
 	int require_jail;
 } opts;
 
+static void free_opts(bool all) {
+	char **tmp;
+
+	free(opts.hostname);
+	if (all) {
+		tmp = opts.jail_argv;
+		while(*tmp)
+			free(*(tmp++));
+
+		free(opts.jail_argv);
+	};
+}
+
 extern int pivot_root(const char *new_root, const char *put_old);
 
 int debug = 0;
@@ -226,6 +239,8 @@ static char** build_envp(const char *seccomp)
 	if (debug > 1)
 		envp[count++] = debug_var;
 
+	envp[count] = NULL;
+	
 	return envp;
 }
 
@@ -319,6 +334,7 @@ static int exec_jail(void *_notused)
 	if (!envp)
 		exit(EXIT_FAILURE);
 
+	free_opts(false);
 	INFO("exec-ing %s\n", *opts.jail_argv);
 	execve(*opts.jail_argv, opts.jail_argv, envp);
 	/* we get there only if execve fails */
@@ -412,7 +428,7 @@ int main(int argc, char **argv)
 			opts.name = optarg;
 			break;
 		case 'h':
-			opts.hostname = optarg;
+			opts.hostname = strdup(optarg);
 			break;
 		case 'r':
 			opts.namespace = 1;
@@ -457,7 +473,13 @@ int main(int argc, char **argv)
 		opts.capabilities != 0,
 		opts.seccomp != 0);
 
-	opts.jail_argv = &argv[optind];
+	/* allocate NULL-terminated array for argv */
+	opts.jail_argv = calloc(1 + argc - optind, sizeof(char*));
+	if (!opts.jail_argv)
+		return EXIT_FAILURE;
+
+	for (size_t s = optind; s < argc; s++)
+		opts.jail_argv[s - optind] = strdup(argv[s]);
 
 	if (opts.namespace && add_path_and_deps(*opts.jail_argv, 1, -1, 0)) {
 		ERROR("failed to load dependencies\n");
@@ -519,6 +541,7 @@ int main(int argc, char **argv)
 			uloop_run();
 		}
 		uloop_done();
+		free_opts(true);
 		return jail_return_code;
 	} else if (jail_process.pid == 0) {
 		/* fork child process */
