@@ -108,19 +108,19 @@ int mount_bind(const char *root, const char *path, int readonly, int error)
 		fd = creat(new, 0644);
 		if (fd == -1) {
 			ERROR("creat(%s) failed: %m\n", new);
-			return -1;
+			return error;
 		}
 		close(fd);
 	}
 
 	if (mount(path, new, NULL, MS_BIND, NULL)) {
 		ERROR("failed to mount -B %s %s: %m\n", path, new);
-		return -1;
+		return error;
 	}
 
 	if (readonly && mount(NULL, new, NULL, MS_BIND | MS_REMOUNT | MS_RDONLY, NULL)) {
 		ERROR("failed to remount ro %s: %m\n", new);
-		return -1;
+		return error;
 	}
 
 	DEBUG("mount -B %s %s (%s)\n", path, new, readonly?"ro":"rw");
