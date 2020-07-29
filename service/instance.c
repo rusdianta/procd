@@ -721,6 +721,9 @@ instance_config_changed(struct service_instance *in, struct service_instance *in
 	if (in->pw_gid != in_new->pw_gid)
 		return true;
 
+	if (in->gr_gid != in_new->gr_gid)
+		return true;
+
 	if (string_changed(in->pidfile, in_new->pidfile))
 		return true;
 
@@ -731,12 +734,49 @@ instance_config_changed(struct service_instance *in, struct service_instance *in
 	if (in->respawn_timeout != in_new->respawn_timeout)
 		return true;
 
-	if ((!in->seccomp && in_new->seccomp) ||
-	    (in->seccomp && !in_new->seccomp) ||
-	    (in->seccomp && in_new->seccomp && strcmp(in->seccomp, in_new->seccomp)))
+	if (in->reload_signal != in_new->reload_signal)
+		return true;
+
+	if (in->term_timeout != in_new->term_timeout)
+		return true;
+
+	if (string_changed(in->seccomp, in_new->seccomp))
 		return true;
 
 	if (!blobmsg_list_equal(&in->limits, &in_new->limits))
+		return true;
+
+	if (in->has_jail != in_new->has_jail)
+		return true;
+
+	if (in->trace != in_new->trace)
+		return true;
+
+	if (in->require_jail != in_new->require_jail)
+		return true;
+
+	if (in->no_new_privs != in_new->no_new_privs)
+		return true;
+
+	if (string_changed(in->jail.name, in_new->jail.name))
+		return true;
+
+	if (string_changed(in->jail.hostname, in_new->jail.hostname))
+		return true;
+
+	if (in->jail.procfs != in_new->jail.procfs)
+		return true;
+
+	if (in->jail.sysfs != in_new->jail.sysfs)
+		return true;
+
+	if (in->jail.ubus != in_new->jail.ubus)
+		return true;
+
+	if (in->jail.log != in_new->jail.log)
+		return true;
+
+	if (in->jail.ronly != in_new->jail.ronly)
 		return true;
 
 	if (!blobmsg_list_equal(&in->jail.mount, &in_new->jail.mount))
@@ -852,7 +892,7 @@ instance_jail_parse(struct service_instance *in, struct blob_attr *attr)
 
 	jail->argc = 2;
 
-	if (tb[JAIL_ATTR_REQUIREJAIL]) {
+	if (tb[JAIL_ATTR_REQUIREJAIL] && blobmsg_get_bool(tb[JAIL_ATTR_REQUIREJAIL])) {
 		in->require_jail = true;
 		jail->argc++;
 	}
@@ -864,24 +904,24 @@ instance_jail_parse(struct service_instance *in, struct blob_attr *attr)
 		jail->hostname = strdup(blobmsg_get_string(tb[JAIL_ATTR_HOSTNAME]));
 		jail->argc += 2;
 	}
-	if (tb[JAIL_ATTR_PROCFS]) {
-		jail->procfs = blobmsg_get_bool(tb[JAIL_ATTR_PROCFS]);
+	if (tb[JAIL_ATTR_PROCFS] && blobmsg_get_bool(tb[JAIL_ATTR_PROCFS])) {
+		jail->procfs = true;
 		jail->argc++;
 	}
-	if (tb[JAIL_ATTR_SYSFS]) {
-		jail->sysfs = blobmsg_get_bool(tb[JAIL_ATTR_SYSFS]);
+	if (tb[JAIL_ATTR_SYSFS] && blobmsg_get_bool(tb[JAIL_ATTR_SYSFS])) {
+		jail->sysfs = true;
 		jail->argc++;
 	}
-	if (tb[JAIL_ATTR_UBUS]) {
-		jail->ubus = blobmsg_get_bool(tb[JAIL_ATTR_UBUS]);
+	if (tb[JAIL_ATTR_UBUS] && blobmsg_get_bool(tb[JAIL_ATTR_UBUS])) {
+		jail->ubus = true;
 		jail->argc++;
 	}
-	if (tb[JAIL_ATTR_LOG]) {
-		jail->log = blobmsg_get_bool(tb[JAIL_ATTR_LOG]);
+	if (tb[JAIL_ATTR_LOG] && blobmsg_get_bool(tb[JAIL_ATTR_LOG])) {
+		jail->log = true;
 		jail->argc++;
 	}
-	if (tb[JAIL_ATTR_RONLY]) {
-		jail->ronly = blobmsg_get_bool(tb[JAIL_ATTR_RONLY]);
+	if (tb[JAIL_ATTR_RONLY] && blobmsg_get_bool(tb[JAIL_ATTR_RONLY])) {
+		jail->ronly = true;
 		jail->argc++;
 	}
 	if (tb[JAIL_ATTR_MOUNT]) {
@@ -1144,13 +1184,34 @@ instance_config_move(struct service_instance *in, struct service_instance *in_sr
 	in->respawn_retry = in_src->respawn_retry;
 	in->respawn_threshold = in_src->respawn_threshold;
 	in->respawn_timeout = in_src->respawn_timeout;
+	in->reload_signal = in_src->reload_signal;
+	in->term_timeout = in_src->term_timeout;
+	in->watchdog.mode = in_src->watchdog.mode;
+	in->watchdog.freq = in_src->watchdog.freq;
 	in->name = in_src->name;
+	in->nice = in_src->nice;
 	in->trace = in_src->trace;
 	in->node.avl.key = in_src->node.avl.key;
 	in->syslog_facility = in_src->syslog_facility;
 
+	in->require_jail = in_src->require_jail;
+	in->no_new_privs = in_src->no_new_privs;
+	in->uid = in_src->uid;
+	in->pw_gid = in_src->pw_gid;
+	in->gr_gid = in_src->gr_gid;
+
+	in->has_jail = in_src->has_jail;
+	in->jail.procfs = in_src->jail.procfs;
+	in->jail.sysfs = in_src->jail.sysfs;
+	in->jail.ubus = in_src->jail.ubus;
+	in->jail.log = in_src->jail.log;
+	in->jail.ronly = in_src->jail.ronly;
+	in->jail.argc = in_src->jail.argc;
+
 	instance_config_move_strdup(&in->pidfile, in_src->pidfile);
 	instance_config_move_strdup(&in->seccomp, in_src->seccomp);
+	instance_config_move_strdup(&in->user, in_src->user);
+	instance_config_move_strdup(&in->group, in_src->group);
 	instance_config_move_strdup(&in->jail.name, in_src->jail.name);
 	instance_config_move_strdup(&in->jail.hostname, in_src->jail.hostname);
 
