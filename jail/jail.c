@@ -355,7 +355,7 @@ int main(int argc, char **argv)
 	sigset_t sigmask;
 	uid_t uid = getuid();
 	char log[] = "/dev/log";
-	char ubus[] = "/var/run/ubus.sock";
+	char ubus[] = "/var/run/ubus/ubus.sock";
 	int ch, i;
 
 	if (uid) {
