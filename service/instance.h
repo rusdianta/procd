@@ -75,6 +75,7 @@ struct service_instance {
 	bool no_new_privs;
 	struct jail jail;
 	char *seccomp;
+	char *capabilities;
 	char *pidfile;
 	int syslog_facility;
 	int exit_code;

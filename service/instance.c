@@ -58,6 +58,7 @@ enum {
 	INSTANCE_ATTR_JAIL,
 	INSTANCE_ATTR_TRACE,
 	INSTANCE_ATTR_SECCOMP,
+	INSTANCE_ATTR_CAPABILITIES,
 	INSTANCE_ATTR_PIDFILE,
 	INSTANCE_ATTR_RELOADSIG,
 	INSTANCE_ATTR_TERMTIMEOUT,
@@ -86,6 +87,7 @@ static const struct blobmsg_policy instance_attr[__INSTANCE_ATTR_MAX] = {
 	[INSTANCE_ATTR_JAIL] = { "jail", BLOBMSG_TYPE_TABLE },
 	[INSTANCE_ATTR_TRACE] = { "trace", BLOBMSG_TYPE_BOOL },
 	[INSTANCE_ATTR_SECCOMP] = { "seccomp", BLOBMSG_TYPE_STRING },
+	[INSTANCE_ATTR_CAPABILITIES] = { "capabilities", BLOBMSG_TYPE_STRING },
 	[INSTANCE_ATTR_PIDFILE] = { "pidfile", BLOBMSG_TYPE_STRING },
 	[INSTANCE_ATTR_RELOADSIG] = { "reload_signal", BLOBMSG_TYPE_INT32 },
 	[INSTANCE_ATTR_TERMTIMEOUT] = { "term_timeout", BLOBMSG_TYPE_INT32 },
@@ -235,6 +237,11 @@ jail_run(struct service_instance *in, char **argv)
 	if (in->group) {
 		argv[argc++] = "-G";
 		argv[argc++] = in->group;
+	}
+
+	if (in->capabilities) {
+		argv[argc++] = "-C";
+		argv[argc++] = in->capabilities;
 	}
 
 	if (in->no_new_privs)
@@ -743,6 +750,9 @@ instance_config_changed(struct service_instance *in, struct service_instance *in
 	if (string_changed(in->seccomp, in_new->seccomp))
 		return true;
 
+	if (string_changed(in->capabilities, in_new->capabilities))
+		return true;
+
 	if (!blobmsg_list_equal(&in->limits, &in_new->limits))
 		return true;
 
@@ -935,6 +945,9 @@ instance_jail_parse(struct service_instance *in, struct blob_attr *attr)
 	if (in->seccomp)
 		jail->argc += 2;
 
+	if (in->capabilities)
+		jail->argc += 2;
+
 	if (in->user)
 		jail->argc += 2;
 
@@ -1051,6 +1064,9 @@ instance_config_parse(struct service_instance *in)
 
 	if (!in->trace && tb[INSTANCE_ATTR_SECCOMP])
 		in->seccomp = strdup(blobmsg_get_string(tb[INSTANCE_ATTR_SECCOMP]));
+
+	if (tb[INSTANCE_ATTR_CAPABILITIES])
+		in->capabilities = strdup(blobmsg_get_string(tb[INSTANCE_ATTR_CAPABILITIES]));
 
 	if (tb[INSTANCE_ATTR_PIDFILE]) {
 		char *pidfile = blobmsg_get_string(tb[INSTANCE_ATTR_PIDFILE]);
@@ -1210,6 +1226,7 @@ instance_config_move(struct service_instance *in, struct service_instance *in_sr
 
 	instance_config_move_strdup(&in->pidfile, in_src->pidfile);
 	instance_config_move_strdup(&in->seccomp, in_src->seccomp);
+	instance_config_move_strdup(&in->capabilities, in_src->capabilities);
 	instance_config_move_strdup(&in->user, in_src->user);
 	instance_config_move_strdup(&in->group, in_src->group);
 	instance_config_move_strdup(&in->jail.name, in_src->jail.name);
@@ -1254,6 +1271,7 @@ instance_free(struct service_instance *in)
 	free(in->jail.name);
 	free(in->jail.hostname);
 	free(in->seccomp);
+	free(in->capabilities);
 	free(in->pidfile);
 	free(in);
 }
@@ -1361,6 +1379,9 @@ void instance_dump(struct blob_buf *b, struct service_instance *in, int verbose)
 
 	if (in->seccomp)
 		blobmsg_add_string(b, "seccomp", in->seccomp);
+
+	if (in->capabilities)
+		blobmsg_add_string(b, "capabilities", in->capabilities);
 
 	if (in->pidfile)
 		blobmsg_add_string(b, "pidfile", in->pidfile);
