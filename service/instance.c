@@ -105,6 +105,7 @@ enum {
 	JAIL_ATTR_RONLY,
 	JAIL_ATTR_MOUNT,
 	JAIL_ATTR_REQUIREJAIL,
+	JAIL_ATTR_PIDFILE,
 	__JAIL_ATTR_MAX,
 };
 
@@ -118,6 +119,7 @@ static const struct blobmsg_policy jail_attr[__JAIL_ATTR_MAX] = {
 	[JAIL_ATTR_RONLY] = { "ronly", BLOBMSG_TYPE_BOOL },
 	[JAIL_ATTR_MOUNT] = { "mount", BLOBMSG_TYPE_TABLE },
 	[JAIL_ATTR_REQUIREJAIL] = { "requirejail", BLOBMSG_TYPE_BOOL },
+	[JAIL_ATTR_PIDFILE] = { "pidfile", BLOBMSG_TYPE_STRING },
 };
 
 struct instance_netdev {
@@ -244,6 +246,11 @@ jail_run(struct service_instance *in, char **argv)
 		argv[argc++] = in->capabilities;
 	}
 
+	if (jail->pidfile) {
+		argv[argc++] = "-P";
+		argv[argc++] = jail->pidfile;
+	}
+
 	if (in->no_new_privs)
 		argv[argc++] = "-c";
 
@@ -260,7 +267,7 @@ jail_run(struct service_instance *in, char **argv)
 		argv[argc++] = "-l";
 
 	if (jail->ronly)
-		argv[argc++] = "-o";
+		argv[argc++] = "-o";	
 
 	if (in->require_jail)
 		argv[argc++] = "-E";
@@ -774,6 +781,9 @@ instance_config_changed(struct service_instance *in, struct service_instance *in
 	if (string_changed(in->jail.hostname, in_new->jail.hostname))
 		return true;
 
+	if (string_changed(in->jail.pidfile, in_new->jail.pidfile))
+		return true;
+
 	if (in->jail.procfs != in_new->jail.procfs)
 		return true;
 
@@ -952,7 +962,12 @@ instance_jail_parse(struct service_instance *in, struct blob_attr *attr)
 		jail->argc += 2;
 
 	if (in->group)
+		jail->argc += 2;	
+	
+	if (tb[JAIL_ATTR_PIDFILE]) {
+		jail->pidfile = strdup(blobmsg_get_string(tb[JAIL_ATTR_PIDFILE]));
 		jail->argc += 2;
+	}
 
 	if (in->no_new_privs)
 		jail->argc++;
@@ -1231,6 +1246,7 @@ instance_config_move(struct service_instance *in, struct service_instance *in_sr
 	instance_config_move_strdup(&in->group, in_src->group);
 	instance_config_move_strdup(&in->jail.name, in_src->jail.name);
 	instance_config_move_strdup(&in->jail.hostname, in_src->jail.hostname);
+	instance_config_move_strdup(&in->jail.pidfile, in_src->jail.pidfile);
 
 	free(in->config);
 	in->config = in_src->config;
@@ -1270,6 +1286,7 @@ instance_free(struct service_instance *in)
 	free(in->group);
 	free(in->jail.name);
 	free(in->jail.hostname);
+	free(in->jail.pidfile);
 	free(in->seccomp);
 	free(in->capabilities);
 	free(in->pidfile);
@@ -1398,6 +1415,8 @@ void instance_dump(struct blob_buf *b, struct service_instance *in, int verbose)
 			blobmsg_add_string(b, "name", in->jail.name);
 		if (in->jail.hostname)
 			blobmsg_add_string(b, "hostname", in->jail.hostname);
+		if (in->jail.pidfile)
+				blobmsg_add_string(b, "pidfile", in->jail.pidfile);
 		blobmsg_add_u8(b, "procfs", in->jail.procfs);
 		blobmsg_add_u8(b, "sysfs", in->jail.sysfs);
 		blobmsg_add_u8(b, "ubus", in->jail.ubus);

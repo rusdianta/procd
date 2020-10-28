@@ -29,6 +29,7 @@
 #include <sched.h>
 #include <linux/limits.h>
 #include <signal.h>
+#include <stdio.h>
 
 #include "capabilities.h"
 #include "elf.h"
@@ -39,7 +40,7 @@
 #include <libubox/uloop.h>
 
 #define STACK_SIZE	(1024 * 1024)
-#define OPT_ARGS	"S:C:n:h:r:w:d:psulocU:G:E"
+#define OPT_ARGS	"S:C:n:h:r:w:d:psulocU:G:EP:"
 
 static struct {
 	char *name;
@@ -49,6 +50,7 @@ static struct {
 	char *capabilities;
 	char *user;
 	char *group;
+	char *pidfile;
 	int no_new_privs;
 	int namespace;
 	int procfs;
@@ -235,6 +237,7 @@ static void usage(void)
 	fprintf(stderr, "  -G <name>\tgroup to run jailed process\n");
 	fprintf(stderr, "  -o\t\tremont jail root (/) read only\n");
 	fprintf(stderr, "  -E\t\tfail if jail cannot be setup\n");
+	fprintf(stderr, "  -P <pidfile>\tcreate <pidfile>\n");
 	fprintf(stderr, "\nWarning: by default root inside the jail is the same\n\
 and he has the same powers as root outside the jail,\n\
 thus he can escape the jail and/or break stuff.\n\
@@ -350,6 +353,29 @@ static void jail_handle_signal(int signo)
 	kill(jail_process.pid, signo);
 }
 
+static int
+jail_writepid(pid_t pid)
+{
+	FILE *pidfile;
+
+	if (!opts.pidfile)
+		return 0;
+
+	pidfile = fopen(opts.pidfile, "w");
+	if (pidfile == NULL)
+		return errno;
+
+	if (fprintf(pidfile, "%d\n", pid) < 0) {
+		fclose(pidfile);
+		return errno;
+	}
+
+	if (fclose(pidfile))
+		return errno;
+
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	sigset_t sigmask;
@@ -424,6 +450,9 @@ int main(int argc, char **argv)
 			break;
 		case 'E':
 			opts.require_jail = 1;
+			break;
+		case 'P':
+			opts.pidfile = optarg;
 			break;
 		}
 	}
@@ -502,6 +531,12 @@ int main(int argc, char **argv)
 
 	if (jail_process.pid > 0) {
 		/* parent process */
+
+		if (jail_writepid(jail_process.pid)) {
+			ERROR("failed to write pidfile: %m\n");
+			return EXIT_FAILURE;
+		}
+
 		uloop_process_add(&jail_process);
 		uloop_run();
 		if (jail_running) {
