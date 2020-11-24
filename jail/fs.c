@@ -75,6 +75,19 @@ int mount_all(const char *jailroot) {
 	return 0;
 }
 
+void mount_free(void) {
+	struct mount *m, *tmp;
+
+	avl_remove_all_elements(&mounts, m, avl, tmp) {
+		if (m->source != (void*)(-1))
+			free((void*)m->source);
+		free((void*)m->target);
+		free((void*)m->filesystemtype);
+		free((void*)m->optstr);
+		free(m);
+	}
+}
+
 void mount_list_init(void) {
 	avl_init(&mounts, avl_strcmp, false, NULL);
 }
