@@ -519,7 +519,7 @@ int main(int argc, char **argv)
 			add_mount("/etc/nsswitch.conf", 1, -1);
 		#endif
 
-		add_mount("/etc/resolv.conf", 1, -1);
+		add_mount("/etc/resolv.conf", 1, 0);
 
 		int flags = CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWIPC | SIGCHLD;
 		if (opts.hostname)
