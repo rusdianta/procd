@@ -37,6 +37,7 @@
 #include "log.h"
 
 #include <libubox/uloop.h>
+#include <libubox/utils.h>
 
 #define STACK_SIZE	(1024 * 1024)
 #define OPT_ARGS	"S:C:n:h:r:w:d:psulocU:G:E"
@@ -62,31 +63,6 @@ extern int pivot_root(const char *new_root, const char *put_old);
 int debug = 0;
 
 static char child_stack[STACK_SIZE];
-
-static int mkdir_p(char *dir, mode_t mask)
-{
-	char *l = strrchr(dir, '/');
-	int ret;
-
-	if (!l)
-		return 0;
-
-	*l = '\0';
-
-	if (mkdir_p(dir, mask))
-		return -1;
-
-	*l = '/';
-
-	ret = mkdir(dir, mask);
-	if (ret && errno == EEXIST)
-		return 0;
-
-	if (ret)
-		ERROR("mkdir(%s, %d) failed: %m\n", dir, mask);
-
-	return ret;
-}
 
 int mount_bind(const char *root, const char *path, int readonly, int error)
 {
