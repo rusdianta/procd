@@ -177,6 +177,13 @@ static int build_jail_fs(void)
 	if (opts.procfs) {
 		mkdir("/proc", 0755);
 		mount("proc", "/proc", "proc", MS_NOATIME | MS_NODEV | MS_NOEXEC | MS_NOSUID, 0);
+		/*
+		 * make /proc/sys read-only
+		 */
+
+		mount("/proc/sys", "/proc/sys", NULL, MS_BIND, 0);
+		mount(NULL, "/proc/sys", NULL, MS_REMOUNT | MS_RDONLY, 0);
+		mount(NULL, "/proc", NULL, MS_REMOUNT, 0);
 	}
 	if (opts.sysfs) {
 		mkdir("/sys", 0755);
