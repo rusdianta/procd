@@ -479,6 +479,10 @@ int main(int argc, char **argv)
 			add_mount("/etc/group", 0, -1);
 		}
 
+		#if defined(__GLIBC__)
+			add_mount("/etc/nsswitch.conf", 0, -1);
+		#endif
+
 		add_mount("/etc/resolv.conf", 0, -1);
 
 		int flags = CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWIPC | SIGCHLD;
