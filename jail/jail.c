@@ -493,7 +493,7 @@ int main(int argc, char **argv)
 		}
 
 		if (!(opts.namespace & CLONE_NEWNET)) {
-            add_mount("/etc/resolv.conf", 1, -1);
+            add_mount("/etc/resolv.conf", 1, 0);
         }
 
 		int flags = CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWIPC | SIGCHLD;
