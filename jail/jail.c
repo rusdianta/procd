@@ -136,7 +136,7 @@ static int build_jail_fs(void)
 	}
 
 	/* oldroot can't be MS_SHARED else pivot_root() fails */
-	if (mount("none", "/", NULL, MS_REC|MS_PRIVATE, NULL)) {
+	if (mount("none", "/", "none", MS_REC|MS_PRIVATE, NULL)) {
 		ERROR("private mount failed %m\n");
 		return -1;
 	}
@@ -196,7 +196,7 @@ static int build_jail_fs(void)
 		mount("sysfs", "/sys", "sysfs", MS_NOATIME | MS_NODEV | MS_NOEXEC | MS_NOSUID | MS_RDONLY, 0);
 	}
 	if (opts.ronly)
-		mount(NULL, "/", NULL, MS_REMOUNT | MS_BIND | MS_RDONLY, 0);
+		mount(NULL, "/", "bind", MS_REMOUNT | MS_BIND | MS_RDONLY, 0);
 
 	return 0;
 }
