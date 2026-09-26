@@ -488,12 +488,12 @@ int main(int argc, char **argv)
 		add_mount("/dev/zero", 0, -1);
 
 		if (opts.user || opts.group) {
-			add_mount("/etc/passwd", 0, -1);
-			add_mount("/etc/group", 0, -1);
+			add_mount("/etc/passwd", 1, -1);
+			add_mount("/etc/group", 1, -1);
 		}
 
 		if (!(opts.namespace & CLONE_NEWNET)) {
-            add_mount("/etc/resolv.conf", 0, -1);
+            add_mount("/etc/resolv.conf", 1, -1);
         }
 
 		int flags = CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWIPC | SIGCHLD;
