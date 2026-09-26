@@ -193,7 +193,7 @@ static int build_jail_fs(void)
 	}
 	if (opts.sysfs) {
 		mkdir("/sys", 0755);
-		mount("sysfs", "/sys", "sysfs", MS_NOATIME | MS_NODEV | MS_NOEXEC | MS_NOSUID | MS_RDONLY, 0);
+		mount("sysfs", "/sys", "sysfs", MS_RELATIME | MS_NODEV | MS_NOEXEC | MS_NOSUID | MS_RDONLY, 0);
 	}
 	if (opts.ronly)
 		mount(NULL, "/", "bind", MS_REMOUNT | MS_BIND | MS_RDONLY, 0);
