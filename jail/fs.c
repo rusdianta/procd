@@ -79,6 +79,16 @@ void mount_list_init(void) {
 	avl_init(&mounts, avl_strcmp, false, NULL);
 }
 
+void mount_free(void)
+{
+	struct mount *m, *tmp;
+
+	avl_remove_all_elements(&mounts, m, avl, tmp) {
+		free((void *)m->path);
+		free(m);
+	}
+}
+
 static int add_script_interp(const char *path, const char *map, int size)
 {
 	int start = 2;

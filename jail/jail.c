@@ -515,6 +515,8 @@ int main(int argc, char **argv)
 			uloop_run();
 		}
 		uloop_done();
+		mount_free();
+		free_library_search();
 		return jail_return_code;
 	} else if (jail_process.pid == 0) {
 		/* fork child process */
